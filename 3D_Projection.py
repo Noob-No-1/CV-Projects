@@ -106,6 +106,27 @@ def cube_edges() -> List[Tuple[int, int]]:
     ]
 
 
+def cube_faces() -> List[Tuple[List[int], Tuple[float, float, float]]]:
+    """
+    Returns list of (face_vertex_indices, face_normal) for each cube face.
+    Face normals point outward from the cube center.
+    """
+    return [
+        # Bottom face (y = -1)
+        ([0, 1, 2, 3], (0.0, -1.0, 0.0)),
+        # Top face (y = +1)
+        ([4, 7, 6, 5], (0.0, 1.0, 0.0)),
+        # Front face (z = -1)
+        ([0, 4, 5, 1], (0.0, 0.0, -1.0)),
+        # Back face (z = +1)
+        ([2, 6, 7, 3], (0.0, 0.0, 1.0)),
+        # Left face (x = -1)
+        ([0, 3, 7, 4], (-1.0, 0.0, 0.0)),
+        # Right face (x = +1)
+        ([1, 5, 6, 2], (1.0, 0.0, 0.0)),
+    ]
+
+
 def transform_points(points_h: np.ndarray, S: float, T: Tuple[float, float, float]) -> np.ndarray:
     """Apply uniform scale and translation in world coordinates to homogeneous points."""
     S_mat = np.diag([S, S, S, 1.0])
@@ -125,6 +146,69 @@ def draw_lines(surface: pygame.Surface, pts2d: np.ndarray, depths: np.ndarray, e
             # Only draw if inside extended screen bounds to avoid huge lines
             if -w <= xi <= 2 * w and -h <= yi <= 2 * h and -w <= xj <= 2 * w and -h <= yj <= 2 * h:
                 pygame.draw.line(surface, color, (xi, yi), (xj, yj), 2)
+
+
+def is_face_visible(face_normal: Tuple[float, float, float], camera_forward: np.ndarray) -> bool:
+    """Check if a face is visible using back-face culling."""
+    normal = np.array(face_normal)
+    # A face is visible if its normal points toward the camera
+    # (dot product with camera forward direction is negative)
+    return np.dot(normal, camera_forward) < 0
+
+
+def transform_face_normals(faces: List[Tuple[List[int], Tuple[float, float, float]]], 
+                          R: np.ndarray) -> List[Tuple[List[int], np.ndarray]]:
+    """Transform face normals from object space to world space."""
+    transformed_faces = []
+    for face_verts, normal in faces:
+        # Transform normal from object space to world space
+        # Note: For rotation matrices, R^(-1) = R^T
+        world_normal = R.T @ np.array(normal)
+        transformed_faces.append((face_verts, world_normal))
+    return transformed_faces
+
+
+def draw_filled_cube(surface: pygame.Surface, pts2d: np.ndarray, depths: np.ndarray, 
+                    transformed_faces: List[Tuple[List[int], np.ndarray]], 
+                    camera_forward: np.ndarray, base_color: Tuple[int, int, int]):
+    """Draw a filled cube with face visibility and depth sorting."""
+    h, w = surface.get_height(), surface.get_width()
+    
+    # Collect visible faces with their depths
+    visible_faces = []
+    for face_verts, world_normal in transformed_faces:
+        if is_face_visible(world_normal, camera_forward):
+            # Calculate average depth of face vertices
+            face_depths = [depths[i] for i in face_verts if depths[i] > 0]
+            if face_depths:
+                avg_depth = sum(face_depths) / len(face_depths)
+                visible_faces.append((face_verts, avg_depth))
+    
+    # Sort faces by depth (back to front for proper rendering)
+    visible_faces.sort(key=lambda x: x[1], reverse=True)
+    
+    # Draw each visible face
+    for face_verts, _ in visible_faces:
+        # Get 2D points for this face
+        face_points = []
+        for vert_idx in face_verts:
+            if depths[vert_idx] > 0:
+                x, y = pts2d[vert_idx]
+                # Clamp to screen bounds to avoid rendering issues
+                x = max(0, min(w-1, x))
+                y = max(0, min(h-1, y))
+                face_points.append((int(x), int(y)))
+        
+        # Only draw if we have at least 3 valid points
+        if len(face_points) >= 3:
+            # Create a slightly darker shade for depth
+            depth_factor = 0.8
+            face_color = tuple(int(c * depth_factor) for c in base_color)
+            pygame.draw.polygon(surface, face_color, face_points)
+            
+            # Draw wireframe outline for better visibility
+            if len(face_points) >= 3:
+                pygame.draw.polygon(surface, (255, 255, 255), face_points, 2)
 
 
 def draw_text(surface: pygame.Surface, text: str, pos: Tuple[int, int], color=(255, 255, 255)):
@@ -155,6 +239,7 @@ def main():
     # Place a stack of cubes marching away from the camera
     base_cube = cube_vertices(size=2.0)
     edges = cube_edges()
+    faces = cube_faces()
 
     colors = [
         (220, 60, 60),
@@ -237,6 +322,8 @@ def main():
             scale = 1.0 / (1.0 + 0.15 * idx)
             cube_w = transform_points(base_cube, S=scale, T=(0.0, 0.0, z_offset))
             uv, depths = project_points(K, Rt, cube_w)
+            
+            # Draw wireframe edges
             draw_lines(screen, uv, depths, edges, colors[idx % len(colors)])
 
         # HUD
