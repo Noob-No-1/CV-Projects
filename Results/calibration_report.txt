@@ -1,0 +1,47 @@
+CAMERA CALIBRATION REPORT
+==================================================
+Generated: 2025-10-23 19:43:50
+Calibration Method: Zhang's Method
+
+CONFIGURATION
+--------------------
+Checkerboard size: (6, 9)
+Square size: 0.025m
+Image size: (640, 480)
+Images processed: 14
+Successful detections: 13
+
+CALIBRATION RESULTS
+--------------------
+Intrinsic Matrix K:
+[[536.4618703    0.         342.36915005]
+ [  0.         536.41425529 235.54830135]
+ [  0.           0.           1.        ]]
+
+Distortion coefficients:
+[[-0.27864661  0.06717285  0.00182395 -0.0003434   0.        ]]
+
+RMS reprojection error: 0.040949 pixels
+Mean reprojection error: 0.040949 pixels
+Max reprojection error: 0.166079 pixels
+
+PER-IMAGE REPROJECTION ERRORS
+------------------------------
+Image  0: left01.jpg           - 0.0262 pixels
+Image  1: left02.jpg           - 0.1661 pixels
+Image  2: left03.jpg           - 0.0231 pixels
+Image  3: left04.jpg           - 0.0265 pixels
+Image  4: left05.jpg           - 0.0217 pixels
+Image  5: left06.jpg           - 0.0246 pixels
+Image  6: left07.jpg           - 0.0321 pixels
+Image  7: left08.jpg           - 0.0330 pixels
+Image  8: left09.jpg           - 0.0411 pixels
+Image  9: left11.jpg           - 0.0229 pixels
+Image 10: left12.jpg           - 0.0279 pixels
+Image 11: left13.jpg           - 0.0632 pixels
+Image 12: left14.jpg           - 0.0239 pixels
+
+QUALITY ASSESSMENT
+--------------------
+Quality: EXCELLENT (< 0.5 pixels)
+Success rate: 92.9%
